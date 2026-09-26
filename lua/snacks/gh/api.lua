@@ -302,9 +302,15 @@ function M.list(what, cb, opts)
       return cb()
     end
     ---@param item snacks.gh.Item
-    return cb(vim.tbl_map(function(item)
+    local items = vim.tbl_map(function(item)
       return cache_set(Item.new(item, api_opts))
-    end, data))
+    end, data)
+    if what == "pr" and opts.draft == false then
+      items = vim.tbl_filter(function(item)
+        return not item.draft
+      end, items)
+    end
+    return cb(items)
   end, {
     args = args,
     fields = api_opts.fields,

@@ -247,7 +247,7 @@ M.gh_issue = {
 
 ---@class snacks.picker.gh.pr.Config: snacks.picker.gh.Config
 ---@field state "open" | "closed" | "merged" | "all"
----@field draft? boolean filter draft PRs
+---@field draft? boolean filter by draft state (`true` for draft PRs, `false` for non-draft PRs)
 ---@field base? string filter by base branch
 M.gh_pr = {
   title = "  Pull Requests",
