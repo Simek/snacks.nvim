@@ -23,7 +23,9 @@ M.meta = {
 ---@field mode? string|string[] defaults to `n`
 
 ---@class snacks.gh.Config
+---@field show_issue_type boolean
 local defaults = {
+  show_issue_type = true,
   --- Keymaps for GitHub buffers
   ---@type table<string, snacks.gh.Keymap|false>?
   -- stylua: ignore

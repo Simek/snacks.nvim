@@ -308,7 +308,7 @@ function M.format(item, picker)
   end
 
   -- Issue type
-  if item.type == "issue" and item.item.issueType then
+  if config.show_issue_type and item.type == "issue" and item.item.issueType then
     local issue_type = item.item.issueType
     local color = GhUtil.issue_type_color(issue_type.color)
     local badge = Snacks.picker.highlight.badge(issue_type.name, "#" .. color)

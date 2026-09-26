@@ -91,8 +91,8 @@ M.props = {
   },
   {
     name = "Type",
-    hl = function(item)
-      if item.type ~= "issue" or not item.item.issueType then
+    hl = function(item, opts)
+      if not opts.show_issue_type or item.type ~= "issue" or not item.item.issueType then
         return
       end
       local issue_type = item.item.issueType
