@@ -2,13 +2,13 @@
 local M = {}
 
 local issue_type_colors = {
-  blue = "0969DA",
+  blue = "085EC4",
   gray = "6E7781",
   green = "1A7F37",
   orange = "BC4C00",
   pink = "BF3989",
   purple = "8250DF",
-  red = "CF222E",
+  red = "BA1E29",
   yellow = "9A6700",
 }
 
