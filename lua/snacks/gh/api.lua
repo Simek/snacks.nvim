@@ -34,7 +34,8 @@ local config = {
     options = { "cache", "jq", "method", "paginate", "silent", "slurp" },
   },
   issue = {
-    list = { "stateReason" },
+    list = { "stateReason", "issueType" },
+    view = { "issueType" },
     options = { "mention", "milestone" },
     ---@param item snacks.picker.gh.Item
     transform = function(item)

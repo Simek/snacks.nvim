@@ -73,6 +73,12 @@
 ---@field color string
 ---@field description? string
 
+---@class snacks.gh.IssueType
+---@field id string
+---@field name string
+---@field color? string
+---@field description? string
+
 ---@class snacks.gh.User
 ---@field id string
 ---@field login string
@@ -119,6 +125,7 @@
 ---@field id string
 ---@field title string
 ---@field labels? snacks.gh.Label[]
+---@field issueType? snacks.gh.IssueType
 ---@field author? snacks.gh.User
 ---@field state string
 ---@field stateReason? string

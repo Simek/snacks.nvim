@@ -1,5 +1,6 @@
 local Actions = require("snacks.gh.actions")
 local Api = require("snacks.gh.api")
+local GhUtil = require("snacks.gh.util")
 
 local M = {}
 
@@ -304,6 +305,15 @@ function M.format(item, picker)
   if item.author and not item.item.author.is_bot then
     ret[#ret + 1] = { " ", nil }
     ret[#ret + 1] = { "@" .. item.author, "SnacksPickerGitAuthor" }
+  end
+
+  -- Issue type
+  if item.type == "issue" and item.item.issueType then
+    local issue_type = item.item.issueType
+    local color = GhUtil.issue_type_color(issue_type.color)
+    local badge = Snacks.picker.highlight.badge(issue_type.name, "#" .. color)
+    ret[#ret + 1] = { " ", nil }
+    vim.list_extend(ret, badge)
   end
 
   -- Labels

@@ -1,4 +1,5 @@
 local Markdown = require("snacks.picker.util.markdown")
+local GhUtil = require("snacks.gh.util")
 
 local M = {}
 local H = Snacks.picker.highlight
@@ -86,6 +87,16 @@ M.props = {
         end
         return ret
       end
+    end,
+  },
+  {
+    name = "Type",
+    hl = function(item)
+      if item.type ~= "issue" or not item.item.issueType then
+        return
+      end
+      local issue_type = item.item.issueType
+      return H.badge(issue_type.name, "#" .. GhUtil.issue_type_color(issue_type.color))
     end,
   },
   {
