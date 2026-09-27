@@ -142,6 +142,7 @@
 ---@field commits? snacks.gh.Commit[]
 ---@field statusCheckRollup? snacks.gh.Check[]
 ---@field baseRefName? string
+---@field baseRefOid? string
 ---@field headRefName? string
 ---@field headRefOid? string
 ---@field isDraft? boolean

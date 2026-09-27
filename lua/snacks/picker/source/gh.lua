@@ -1,6 +1,7 @@
 local Actions = require("snacks.gh.actions")
 local Api = require("snacks.gh.api")
 local GhUtil = require("snacks.gh.util")
+local Proc = require("snacks.util.spawn")
 
 local M = {}
 
@@ -160,6 +161,37 @@ function M.diff(opts, ctx)
   ---@async
   return function(cb)
     local item = Api.get({ type = "pr", repo = opts.repo, number = opts.pr })
+    local diff_cmd, diff_args = "gh", args
+    if opts.ignore_whitespace then
+      local refs = Api.fetch_sync({
+        args = { "pr", "view", tostring(opts.pr) },
+        fields = { "baseRefOid", "headRefOid" },
+        repo = opts.repo,
+      })
+      if not refs or not refs.baseRefOid or not refs.headRefOid then
+        Snacks.notify.error("snacks.picker.gh.diff: Failed to get PR base/head commits")
+        return
+      end
+      local fetch = Proc.new({
+        cmd = "git",
+        args = { "fetch", "--no-tags", "origin", refs.baseRefOid, refs.headRefOid },
+        cwd = cwd,
+      }):wait()
+      if fetch.code ~= 0 then
+        Snacks.notify.error("snacks.picker.gh.diff: Failed to fetch PR commits")
+        return
+      end
+      diff_cmd = "git"
+      diff_args = {
+        "diff",
+        "--no-color",
+        "--no-ext-diff",
+        "--diff-filter=u",
+        "--ignore-all-space",
+        refs.baseRefOid,
+        refs.headRefOid,
+      }
+    end
 
     -- fetch on the main thread since rendering uses non-fast APIs
     local annotations = ctx.async:schedule(function()
@@ -168,8 +200,8 @@ function M.diff(opts, ctx)
 
     Diff.diff(
       ctx:opts({
-        cmd = "gh",
-        args = args,
+        cmd = diff_cmd,
+        args = diff_args,
         cwd = cwd,
         annotations = annotations,
       }),
