@@ -98,6 +98,7 @@ When viewing an issue or PR in the picker, press `<cr>` to show available action
 - **Add comment** - Add a new comment
 - **Add reaction** - React with emoji
 - **Add/Remove labels** - Manage labels
+- **Add/Remove issue type** - Assign or clear an organization-defined issue type
 - **Close/Reopen** - Change issue/PR state
 - **Edit** - Edit title and body
 - **Yank URL** - Copy URL to clipboard

@@ -300,6 +300,68 @@ function M.labels(opts, ctx)
   end
 end
 
+---@param opts snacks.picker.gh.issue_types.Config
+---@type snacks.picker.finder
+function M.issue_types(opts, ctx)
+  if not opts.repo then
+    Snacks.notify.error("snacks.picker.gh.issue_types: `opts.repo` is required")
+    return {}
+  end
+  if not opts.number then
+    Snacks.notify.error("snacks.picker.gh.issue_types: `opts.number` is required")
+    return {}
+  end
+
+  ---@async
+  return function(cb)
+    local owner, name = opts.repo:match("^(.-)/(.-)$")
+    if not owner or not name then
+      Snacks.notify.error("snacks.picker.gh.issue_types: `opts.repo` must be owner/repo")
+      return
+    end
+    local issue = Api.get({ type = "issue", repo = opts.repo, number = opts.number })
+    if not issue then
+      Snacks.notify.error("snacks.picker.gh.issue_types: Failed to get issue")
+      return
+    end
+    local data = Api.graphql_sync({
+      params = { owner = owner, name = name },
+      query = [[
+        query($owner: String!, $name: String!) {
+          repository(owner: $owner, name: $name) {
+            owner {
+              ... on Organization {
+                issueTypes(first: 100) {
+                  nodes { id name color description }
+                }
+              }
+            }
+          }
+        }
+      ]],
+    })
+    local issue_types = vim.tbl_get(data or {}, "repository", "owner", "issueTypes") or {}
+    local current = issue.item.issueType
+    table.sort(issue_types, function(a, b)
+      local a_added = current and a.id == current.id or false
+      local b_added = current and b.id == current.id or false
+      if a_added ~= b_added then
+        return a_added
+      end
+      return a.name:lower() < b.name:lower()
+    end)
+
+    for _, it in ipairs(issue_types) do
+      cb({
+        text = it.name,
+        issue_type = it,
+        added = current ~= nil and current.id == it.id,
+        item = it,
+      })
+    end
+  end
+end
+
 ---@param item snacks.picker.gh.Item
 ---@type snacks.picker.format
 function M.format(item, picker)
@@ -398,6 +460,20 @@ function M.format_label(item, picker)
   local color = item.item.color or "888888"
   local badge = Snacks.picker.highlight.badge(item.label, "#" .. color)
   vim.list_extend(ret, badge)
+  return ret
+end
+
+---@type snacks.picker.format
+function M.format_issue_type(item, picker)
+  local ret = {} ---@type snacks.picker.Highlight[]
+  local added = item.added
+  if picker.list:is_selected(item) then
+    added = not added
+  end
+  ret[#ret + 1] = { added and "󰱒 " or "󰄱 ", "SnacksPickerDelim" }
+  ret[#ret + 1] = { " " }
+  local color = GhUtil.issue_type_color(item.issue_type.color)
+  vim.list_extend(ret, Snacks.picker.highlight.badge(item.issue_type.name, "#" .. color))
   return ret
 end
 

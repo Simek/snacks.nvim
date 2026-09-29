@@ -318,6 +318,18 @@ M.gh_labels = {
   format = "gh_format_label",
 }
 
+---@class snacks.picker.gh.issue_types.Config: snacks.picker.Config
+---@field number number issue number
+---@field repo string GitHub repository (owner/repo)
+M.gh_issue_types = {
+  layout = { preset = "select", layout = { max_width = 50 } },
+  title = "  Issue Types",
+  main = { current = true },
+  group = true,
+  finder = "gh_issue_types",
+  format = "gh_format_issue_type",
+}
+
 ---@class snacks.picker.gh.actions.Config: snacks.picker.Config
 ---@field number number issue or PR number
 ---@field repo string GitHub repository (owner/repo). Defaults to current git repo

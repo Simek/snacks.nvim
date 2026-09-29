@@ -223,7 +223,7 @@ M.actions.gh_react = {
 
 M.actions.gh_label = {
   desc = "Add/Remove labels",
-  icon = "󰌕 ",
+  icon = "󰓻 ",
   action = function(item, ctx)
     Snacks.picker.pick("gh_labels", {
       number = item.number,
@@ -242,6 +242,42 @@ M.actions.gh_label = {
             endpoint = "/repos/{repo}/issues/{number}/labels",
             method = "PUT",
             input = { labels = vim.tbl_keys(labels) },
+          },
+        }, ctx)
+        picker:close()
+      end,
+    })
+  end,
+}
+
+M.actions.gh_issue_type = {
+  desc = "Add/Remove issue type",
+  icon = "󱈤 ",
+  type = "issue",
+  action = function(item, ctx)
+    Snacks.picker.pick("gh_issue_types", {
+      number = item.number,
+      repo = item.repo,
+      confirm = function(picker, issue_type)
+        if not issue_type then
+          return
+        end
+        M.run(item, {
+          api = {
+            endpoint = "graphql",
+            input = {
+              query = [[
+                mutation($issueId: ID!, $issueTypeId: ID) {
+                  updateIssue(input: { id: $issueId, issueTypeId: $issueTypeId }) {
+                    issue { id }
+                  }
+                }
+              ]],
+              variables = {
+                issueId = item.id,
+                issueTypeId = issue_type.added and vim.NIL or issue_type.item.id,
+              },
+            },
           },
         }, ctx)
         picker:close()
