@@ -188,6 +188,7 @@ function M.diff(opts, ctx)
         "--no-ext-diff",
         "--diff-filter=u",
         "--ignore-all-space",
+        "--merge-base",
         refs.baseRefOid,
         refs.headRefOid,
       }

@@ -275,7 +275,7 @@ M.gh_pr = {
 
 ---@class snacks.picker.gh.diff.Config: snacks.picker.Config
 ---@field group? boolean group changes by file (when false, show individual hunks)
----@field ignore_whitespace? boolean compare PR commits with all whitespace ignored
+---@field ignore_whitespace? boolean show PR changes diff with all whitespace ignored
 ---@field pr number number PR number to diff against
 ---@field repo? string GitHub repository (owner/repo). Defaults to current git repo
 M.gh_diff = {
