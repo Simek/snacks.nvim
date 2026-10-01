@@ -20,4 +20,17 @@ function M.issue_type_color(color)
   return color:match("^%x%x%x%x%x%x$") and color or "888888"
 end
 
+---@param query string
+---@return string
+function M.search_query(query)
+  local function qualifier(field, value)
+    local name = field == "l" and "label" or "type"
+    local escaped = value:gsub("\\", "\\\\"):gsub('"', '\\"')
+    return name .. ':"' .. escaped .. '"'
+  end
+
+  query = query:gsub(":([lt])%((.-)%)", qualifier)
+  return vim.trim(query)
+end
+
 return M

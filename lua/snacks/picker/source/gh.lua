@@ -39,7 +39,7 @@ M.actions = setmetatable({}, {
 ---@type snacks.picker.finder
 function M.gh(opts, ctx)
   if ctx.filter.search ~= "" then
-    opts.search = ctx.filter.search
+    opts.search = GhUtil.search_query(ctx.filter.search)
   end
   ---@async
   return function(cb)
