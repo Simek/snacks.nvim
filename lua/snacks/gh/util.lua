@@ -30,6 +30,7 @@ function M.search_query(query)
   end
 
   query = query:gsub(":([lt])%((.-)%)", qualifier)
+  query = query:gsub("@([%w%-]+)", "author:%1")
   return vim.trim(query)
 end
 

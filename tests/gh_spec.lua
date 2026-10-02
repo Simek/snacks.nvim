@@ -8,6 +8,11 @@ describe("GitHub search query", function()
     assert.are.equal('type:"Feature"', search_query(":t(Feature)"))
   end)
 
+  it("converts @username filters to GitHub author qualifiers", function()
+    assert.are.equal("author:octocat", search_query("@octocat"))
+    assert.are.equal('crash author:octo-cat label:"Bug"', search_query("crash @octo-cat :l(Bug)"))
+  end)
+
   it("preserves regular search terms and supports names with spaces", function()
     assert.are.equal(
       'crash label:"good first issue" type:"Bug"',

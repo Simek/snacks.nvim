@@ -82,7 +82,7 @@ Snacks.gh.open({ type = "issue", number = 123, repo = "owner/repo" })
 ```
 
 > [!note]
-> In the issue picker, `:l(LABEL)` filters entries by label and `:t(TAG)` by an organization-defined issue type.
+> In the issue picker, `:l(LABEL)` filters entries by label, `:t(TAG)` by an organization-defined issue type, and `@USERNAME` by author.
 > Filters are case-insensitive, and can be combined with regular search text.
 
 ### Available Actions
