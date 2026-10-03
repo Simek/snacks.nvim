@@ -38,8 +38,11 @@ M.actions = setmetatable({}, {
 ---@param opts snacks.picker.gh.list.Config
 ---@type snacks.picker.finder
 function M.gh(opts, ctx)
-  if ctx.filter.search ~= "" then
-    opts.search = GhUtil.search_query(ctx.filter.search)
+  opts = vim.deepcopy(opts)
+  local search = vim.trim(ctx.filter.search)
+  if search ~= "" then
+    search = GhUtil.search_query(search)
+    opts.search = opts.search and opts.search ~= "" and (opts.search .. " " .. search) or search
   end
   ---@async
   return function(cb)
