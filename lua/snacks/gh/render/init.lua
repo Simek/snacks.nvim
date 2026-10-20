@@ -147,6 +147,24 @@ M.props = {
     end,
   },
   {
+    name = "Fixes",
+    hl = function(item)
+      if item.type ~= "pr" then
+        return
+      end
+      local ret = {} ---@type snacks.picker.Highlight[]
+      for _, issue in ipairs(item.closingIssuesReferences or {}) do
+        local badge = H.badge("#" .. issue.number, "SnacksGhGreen")
+        badge[#badge] = nil
+        if #ret > 0 then
+          ret[#ret + 1] = { " " }
+        end
+        H.extend(ret, badge)
+      end
+      return #ret > 0 and ret or nil
+    end,
+  },
+  {
     name = "Checks",
     hl = function(item, opts)
       if item.type ~= "pr" then

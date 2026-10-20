@@ -745,6 +745,45 @@ function M.get_actions(item, ctx)
       ret[name] = a
     end
   end
+  if item.type == "pr" then
+    for i, issue in ipairs(item.closingIssuesReferences or {}) do
+      local number = issue.number
+      local repo = issue.repository and issue.repository.nameWithOwner or item.repo
+      local uri = ("gh://%s/issue/%s"):format(repo, number)
+      ret["gh_linked_issue_buffer_" .. i] = {
+        desc = ("Open issue #%s in buffer"):format(number),
+        icon = M.actions.gh_open.icon,
+        priority = -1,
+        action = function(_, action_ctx)
+          local win = action_ctx.main or (action_ctx.picker and action_ctx.picker.main)
+          if action_ctx.picker and (action_ctx.picker.opts.jump or {}).close then
+            action_ctx.picker:close()
+          end
+          local function open()
+            vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
+          end
+          if win and vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_call(win, open)
+          else
+            open()
+          end
+        end,
+      }
+      ret["gh_linked_issue_browser_" .. i] = {
+        desc = ("Open issue #%s in web browser"):format(number),
+        icon = M.actions.gh_browse.icon,
+        priority = -1,
+        action = function()
+          Api.cmd(function()
+            Snacks.notify.info(("Opened issue #%s in web browser"):format(number))
+          end, {
+            args = { "issue", "view", tostring(number), "--web" },
+            repo = repo,
+          })
+        end,
+      }
+    end
+  end
   return ret
 end
 

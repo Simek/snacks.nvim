@@ -140,6 +140,7 @@
 ---@field mergeStateStatus? string
 ---@field mergeable? boolean
 ---@field commits? snacks.gh.Commit[]
+---@field closingIssuesReferences? {number: number, repository?: {nameWithOwner?: string}}[]
 ---@field statusCheckRollup? snacks.gh.Check[]
 ---@field baseRefName? string
 ---@field baseRefOid? string

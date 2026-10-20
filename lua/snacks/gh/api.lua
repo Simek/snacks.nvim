@@ -48,6 +48,7 @@ local config = {
     list = {
       "mergedAt",
       "changedFiles",
+      "closingIssuesReferences",
       "mergeable",
       "mergeStateStatus",
       "isDraft",
