@@ -77,7 +77,7 @@ local defaults = {
     checks = {
       pending = " ",
       success = " ",
-      failure = "",
+      failure = " ",
       skipped = " ",
     },
     issue = {

@@ -65,7 +65,7 @@ M.props = {
   {
     name = "Author",
     hl = function(item, opts)
-      return H.badge(opts.icons.user .. " " .. item.author, "SnacksGhUserBadge")
+      return H.badge(opts.icons.user .. item.author, "SnacksGhUserBadge")
     end,
   },
   time_prop("created"),
@@ -143,7 +143,7 @@ M.props = {
       local icon = opts.icons.merge_status[status]
       status = U.title(status)
       local hl = "SnacksGhPr" .. status
-      return { { icon .. " " .. status, hl } }
+      return { { icon .. status, hl } }
     end,
   },
   {
@@ -198,9 +198,12 @@ M.props = {
         local count = stats[status]
         if count then
           local icon = opts.icons.checks[status:lower()] or opts.icons.checks["pending"]
-          local badge = H.badge(icon .. " " .. tostring(count), "SnacksGhCheck" .. status)
+          local badge = H.badge(icon .. tostring(count), "SnacksGhCheck" .. status)
+          badge[#badge] = nil
+          if #ret > 0 then
+            ret[#ret + 1] = { " " }
+          end
           vim.list_extend(ret, badge)
-          ret[#ret + 1] = { " " }
         end
       end
       ret[#ret + 1] = { " " }
