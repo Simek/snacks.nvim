@@ -397,9 +397,14 @@ function M.format(item, picker)
   if item.title then
     item.msg = item.title
     Snacks.picker.highlight.extend(ret, Snacks.picker.format.commit_message(item, picker))
-    local issues = item.type == "pr" and item.item.closingIssuesReferences or nil
-    if issues and #issues > 0 then
-      local badge = Snacks.picker.highlight.badge(config.icons.issue.open .. #issues, "SnacksGhIssueOpen")
+    local refs, icon, color ---@type snacks.gh.LinkedReference[]?, string, string
+    if item.type == "pr" then
+      refs, icon, color = item.item.closingIssuesReferences, config.icons.issue.open, "SnacksGhIssueOpen"
+    elseif item.type == "issue" then
+      refs, icon, color = item.item.closedByPullRequestsReferences, config.icons.pr.merged, "SnacksGhGreen"
+    end
+    if refs and #refs > 0 then
+      local badge = Snacks.picker.highlight.badge(icon .. tostring(#refs), color)
       badge[#badge] = nil
       ret[#ret + 1] = { " " }
       vim.list_extend(ret, badge)

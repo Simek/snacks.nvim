@@ -727,6 +727,58 @@ function M.tpl(str, ...)
   )
 end
 
+---@param ret table<string, snacks.gh.Action>
+---@param item snacks.picker.gh.Item
+---@param refs snacks.gh.LinkedReference[]
+---@param target "issue" | "pr"
+local function add_linked_actions(ret, item, refs, target)
+  local kind = target == "pr" and "PR" or "issue"
+  for i, ref in ipairs(refs) do
+    local number = ref.number
+    local repository = ref.repository
+    local repo = item.repo
+    if repository then
+      repo = repository.nameWithOwner
+        or (repository.name and repository.owner and repository.owner.login
+          and ("%s/%s"):format(repository.owner.login, repository.name))
+        or repo
+    end
+    local uri = ("gh://%s/%s/%s"):format(repo, target, number)
+    ret[("gh_linked_%s_buffer_%d"):format(target, i)] = {
+      desc = ("Open %s #%s in buffer"):format(kind, number),
+      icon = M.actions.gh_open.icon,
+      priority = -1,
+      action = function(_, action_ctx)
+        local win = action_ctx.main or (action_ctx.picker and action_ctx.picker.main)
+        if action_ctx.picker and (action_ctx.picker.opts.jump or {}).close then
+          action_ctx.picker:close()
+        end
+        local function open()
+          vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
+        end
+        if win and vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_call(win, open)
+        else
+          open()
+        end
+      end,
+    }
+    ret[("gh_linked_%s_browser_%d"):format(target, i)] = {
+      desc = ("Open %s #%s in web browser"):format(kind, number),
+      icon = M.actions.gh_browse.icon,
+      priority = -1,
+      action = function()
+        Api.cmd(function()
+          Snacks.notify.info(("Opened %s #%s in web browser"):format(kind, number))
+        end, {
+          args = { target, "view", tostring(number), "--web" },
+          repo = repo,
+        })
+      end,
+    }
+  end
+end
+
 ---@param item snacks.picker.gh.Item
 ---@param ctx snacks.gh.action.ctx
 function M.get_actions(item, ctx)
@@ -746,43 +798,9 @@ function M.get_actions(item, ctx)
     end
   end
   if item.type == "pr" then
-    for i, issue in ipairs(item.closingIssuesReferences or {}) do
-      local number = issue.number
-      local repo = issue.repository and issue.repository.nameWithOwner or item.repo
-      local uri = ("gh://%s/issue/%s"):format(repo, number)
-      ret["gh_linked_issue_buffer_" .. i] = {
-        desc = ("Open issue #%s in buffer"):format(number),
-        icon = M.actions.gh_open.icon,
-        priority = -1,
-        action = function(_, action_ctx)
-          local win = action_ctx.main or (action_ctx.picker and action_ctx.picker.main)
-          if action_ctx.picker and (action_ctx.picker.opts.jump or {}).close then
-            action_ctx.picker:close()
-          end
-          local function open()
-            vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
-          end
-          if win and vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_call(win, open)
-          else
-            open()
-          end
-        end,
-      }
-      ret["gh_linked_issue_browser_" .. i] = {
-        desc = ("Open issue #%s in web browser"):format(number),
-        icon = M.actions.gh_browse.icon,
-        priority = -1,
-        action = function()
-          Api.cmd(function()
-            Snacks.notify.info(("Opened issue #%s in web browser"):format(number))
-          end, {
-            args = { "issue", "view", tostring(number), "--web" },
-            repo = repo,
-          })
-        end,
-      }
-    end
+    add_linked_actions(ret, item, item.closingIssuesReferences or {}, "issue")
+  elseif item.type == "issue" then
+    add_linked_actions(ret, item, item.closedByPullRequestsReferences or {}, "pr")
   end
   return ret
 end

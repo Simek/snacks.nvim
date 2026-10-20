@@ -34,7 +34,7 @@ local config = {
     options = { "cache", "jq", "method", "paginate", "silent", "slurp" },
   },
   issue = {
-    list = { "stateReason", "issueType" },
+    list = { "stateReason", "issueType", "closedByPullRequestsReferences" },
     view = { "issueType" },
     options = { "mention", "milestone" },
     ---@param item snacks.picker.gh.Item

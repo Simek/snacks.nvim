@@ -120,6 +120,10 @@
 
 ---@alias snacks.gh.Thread snacks.gh.Comment|snacks.gh.Review
 
+---@class snacks.gh.LinkedReference
+---@field number number
+---@field repository? {nameWithOwner?: string, name?: string, owner?: {login?: string}}
+
 ---@class snacks.gh.Item
 ---@field number number
 ---@field id string
@@ -140,7 +144,8 @@
 ---@field mergeStateStatus? string
 ---@field mergeable? boolean
 ---@field commits? snacks.gh.Commit[]
----@field closingIssuesReferences? {number: number, repository?: {nameWithOwner?: string}}[]
+---@field closingIssuesReferences? snacks.gh.LinkedReference[]
+---@field closedByPullRequestsReferences? snacks.gh.LinkedReference[]
 ---@field statusCheckRollup? snacks.gh.Check[]
 ---@field baseRefName? string
 ---@field baseRefOid? string

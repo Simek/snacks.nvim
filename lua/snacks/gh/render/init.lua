@@ -30,6 +30,25 @@ local function time_prop(field)
   }
 end
 
+---@param refs {number: number}[]?
+---@param color string
+---@return snacks.picker.Highlight[]?
+local function ref_badges(refs, color)
+  if not refs or #refs == 0 then
+    return
+  end
+  local ret = {} ---@type snacks.picker.Highlight[]
+  for _, ref in ipairs(refs) do
+    local badge = H.badge("#" .. ref.number, color)
+    badge[#badge] = nil
+    if #ret > 0 then
+      ret[#ret + 1] = { " " }
+    end
+    H.extend(ret, badge)
+  end
+  return ret
+end
+
 ---@type {name: string, hl:fun(item:snacks.picker.gh.Item, opts:snacks.gh.Config):snacks.picker.Highlight[]? }[]
 M.props = {
   {
@@ -152,16 +171,16 @@ M.props = {
       if item.type ~= "pr" then
         return
       end
-      local ret = {} ---@type snacks.picker.Highlight[]
-      for _, issue in ipairs(item.closingIssuesReferences or {}) do
-        local badge = H.badge("#" .. issue.number, "SnacksGhGreen")
-        badge[#badge] = nil
-        if #ret > 0 then
-          ret[#ret + 1] = { " " }
-        end
-        H.extend(ret, badge)
+      return ref_badges(item.closingIssuesReferences, "SnacksGhGreen")
+    end,
+  },
+  {
+    name = "Linked PRs",
+    hl = function(item)
+      if item.type ~= "issue" then
+        return
       end
-      return #ret > 0 and ret or nil
+      return ref_badges(item.closedByPullRequestsReferences, "SnacksGhGreen")
     end,
   },
   {
