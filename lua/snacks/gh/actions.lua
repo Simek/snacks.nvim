@@ -2,6 +2,11 @@ local Api = require("snacks.gh.api")
 local config = require("snacks.gh").config()
 
 local M = {}
+local linked_panels = {} ---@type table<number, { win: snacks.win }>
+local linked_panel_parents = {} ---@type table<number, number>
+local linked_panel_buffers = {} ---@type table<number, number>
+local linked_panel_close_autocmds = {} ---@type table<number, { parents: table<number, boolean> }>
+local linked_panel_listeners = {} ---@type table<number, { parent: number, picker: snacks.Picker, selection: string? }>
 
 ---@class snacks.gh.action.ctx
 ---@field items snacks.picker.gh.Item[]
@@ -133,12 +138,25 @@ M.actions.gh_actions = {
         if not it then
           return
         end
+        local linked_panel_action = it.name and it.name:match("^gh_linked_.+_panel_%d+$")
+        if linked_panel_action and ctx.main then
+          while linked_panel_parents[ctx.main] and vim.api.nvim_win_is_valid(linked_panel_parents[ctx.main]) do
+            ctx.main = linked_panel_parents[ctx.main]
+          end
+        end
         ctx.action = action
         if ctx.picker then
           ctx.picker.visual = ctx.picker.visual or picker.visual or nil
           ctx.picker:focus()
         end
         update_main(item, ctx)
+        if linked_panel_action then
+          picker:close()
+          vim.schedule(function()
+            it.action.action(item, ctx)
+          end)
+          return
+        end
         it.action.action(item, ctx)
         picker:close()
       end,
@@ -727,6 +745,238 @@ function M.tpl(str, ...)
   )
 end
 
+---@param ctx snacks.gh.action.ctx
+---@param uri string
+local function open_linked_buffer(ctx, uri)
+  local win = ctx.main or (ctx.picker and ctx.picker.main)
+  if ctx.picker and (ctx.picker.opts.jump or {}).close then
+    ctx.picker:close()
+  end
+  local function open()
+    vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
+  end
+  if win and vim.api.nvim_win_is_valid(win) then
+    vim.api.nvim_win_call(win, open)
+  else
+    open()
+  end
+end
+
+---@param parent number
+local function close_linked_panel(parent)
+  local state = linked_panels[parent]
+  if state then
+    linked_panels[parent] = nil
+    if state.win:valid() then
+      state.win:close()
+    end
+  end
+end
+
+---@param item snacks.picker.Item?
+local function linked_item_key(item)
+  item = item and (item.gh_item or item)
+  if item and item.repo and item.type and item.number then
+    return ("%s:%s:%s"):format(item.repo, item.type, item.number)
+  end
+end
+
+---@param picker snacks.Picker?
+---@param parent number
+local function watch_linked_panel_list(picker, parent)
+  local list = picker and picker.list and picker.list.win
+  if not list or not list:valid() then
+    return
+  end
+
+  local list_win = list.win
+  local state = linked_panel_listeners[list_win]
+  if state then
+    state.parent = parent
+    state.picker = picker
+    state.selection = linked_item_key(picker:current())
+    return
+  end
+
+  state = {
+    parent = parent,
+    picker = picker,
+    selection = linked_item_key(picker:current()),
+  }
+  linked_panel_listeners[list_win] = state
+  list:on("WinEnter", function()
+    local current = linked_panel_listeners[list_win]
+    if current then
+      close_linked_panel(current.parent)
+    end
+  end, { win = true })
+  list:on("CursorMoved", function()
+    local current = linked_panel_listeners[list_win]
+    if current and current.selection and linked_item_key(current.picker:current()) ~= current.selection then
+      close_linked_panel(current.parent)
+    end
+  end, { buf = true })
+  list:on("WinClosed", function()
+    linked_panel_listeners[list_win] = nil
+  end, { win = true })
+end
+
+---@param parent number
+local function restore_linked_panel_focus(parent)
+  vim.schedule(function()
+    for _, state in pairs(linked_panels) do
+      if state.win:valid() then
+        return
+      end
+    end
+    if vim.api.nvim_win_is_valid(parent) then
+      vim.api.nvim_set_current_win(parent)
+    end
+  end)
+end
+
+---@param buf number
+local function restore_linked_panel_keys(buf)
+  if type(buf) ~= "number" or not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  local gh = require("snacks.gh.buf").attached[buf]
+  if gh then
+    gh:keys()
+  end
+end
+
+---@param source number
+---@param parent number
+local function watch_linked_panel_close(source, parent)
+  local state = linked_panel_close_autocmds[source]
+  if state then
+    state.parents[parent] = true
+    return
+  end
+  state = { parents = { [parent] = true } }
+  linked_panel_close_autocmds[source] = state
+  vim.api.nvim_create_autocmd("WinClosed", {
+    pattern = tostring(source),
+    once = true,
+    callback = function()
+      linked_panel_close_autocmds[source] = nil
+      for panel_parent in pairs(state.parents) do
+        close_linked_panel(panel_parent)
+      end
+    end,
+  })
+end
+
+---@param parent number
+---@param panel snacks.win
+---@param uri string
+local function load_linked_panel(parent, panel, uri)
+  local old_buf = panel.buf
+  local existing = vim.fn.bufnr(uri)
+  vim.api.nvim_win_call(panel.win, function()
+    vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
+  end)
+  local buf = vim.api.nvim_win_get_buf(panel.win)
+  linked_panel_buffers[panel.win] = buf
+  if existing == -1 then
+    vim.bo[buf].buflisted = false
+  end
+  vim.keymap.set({ "n", "i" }, "<Esc>", function()
+    local current = vim.api.nvim_get_current_win()
+    local current_parent = linked_panel_parents[current]
+    if current_parent and vim.w[current].snacks_gh_linked_panel then
+      close_linked_panel(current_parent)
+      restore_linked_panel_focus(current_parent)
+    elseif panel:valid() and current == panel.win then
+      panel:close()
+      restore_linked_panel_focus(parent)
+    else
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    end
+  end, {
+    buffer = buf,
+    desc = "Close linked GitHub panel",
+  })
+  if old_buf and old_buf ~= buf then
+    vim.schedule(function()
+      restore_linked_panel_keys(old_buf)
+    end)
+  end
+end
+
+---@param ctx snacks.gh.action.ctx
+---@param uri string
+---@param title string
+local function open_linked_panel(ctx, uri, title)
+  local picker = ctx.picker
+  local preview = picker and picker.preview and picker.preview.win
+  local win = ctx.main
+    or (preview and preview:valid() and preview.win)
+    or (picker and picker.main)
+    or vim.api.nvim_get_current_win()
+  if not vim.api.nvim_win_is_valid(win) then
+    win = vim.api.nvim_get_current_win()
+  end
+  while linked_panel_parents[win] and vim.api.nvim_win_is_valid(linked_panel_parents[win]) do
+    win = linked_panel_parents[win]
+  end
+  watch_linked_panel_list(picker, win)
+
+  local state = linked_panels[win]
+  if state and state.win:valid() then
+    local opts = vim.api.nvim_win_get_config(state.win.win)
+    opts.title = title
+    opts.title_pos = "left"
+    vim.api.nvim_win_set_config(state.win.win, opts)
+    load_linked_panel(win, state.win, uri)
+    vim.api.nvim_set_current_win(state.win.win)
+    return
+  end
+
+  local parent = vim.api.nvim_win_get_config(win)
+  local panel = Snacks.win({
+    relative = "win",
+    win = win,
+    row = 0.5,
+    col = 0,
+    width = 0,
+    height = 0.5,
+    border = parent.relative ~= "" and parent.border or "top_bottom",
+    title = title,
+    title_pos = "left",
+    backdrop = false,
+    enter = true,
+    fixbuf = false,
+    zindex = Snacks.win.zindex(parent.zindex or 50),
+    wo = { winhighlight = vim.wo[win].winhighlight },
+    w = { snacks_gh_linked_panel = true },
+  })
+  linked_panels[win] = { win = panel }
+  linked_panel_parents[panel.win] = win
+  local panel_id = panel.win
+  panel:on("WinClosed", function()
+    linked_panel_parents[panel_id] = nil
+    local buf = linked_panel_buffers[panel_id]
+    linked_panel_buffers[panel_id] = nil
+    if linked_panels[win] and linked_panels[win].win == panel then
+      linked_panels[win] = nil
+    end
+    if buf then
+      vim.schedule(function()
+        restore_linked_panel_keys(buf)
+      end)
+    end
+  end, { win = true })
+
+  watch_linked_panel_close(win, win)
+  if preview and preview:valid() then
+    watch_linked_panel_close(preview.win, win)
+  end
+
+  load_linked_panel(win, panel, uri)
+end
+
 ---@param ret table<string, snacks.gh.Action>
 ---@param item snacks.picker.gh.Item
 ---@param refs snacks.gh.LinkedReference[]
@@ -748,19 +998,16 @@ local function add_linked_actions(ret, item, refs, target)
       desc = ("Open %s #%s in buffer"):format(kind, number),
       icon = M.actions.gh_open.icon,
       priority = -1,
-      action = function(_, action_ctx)
-        local win = action_ctx.main or (action_ctx.picker and action_ctx.picker.main)
-        if action_ctx.picker and (action_ctx.picker.opts.jump or {}).close then
-          action_ctx.picker:close()
-        end
-        local function open()
-          vim.api.nvim_cmd({ cmd = "edit", args = { uri } }, {})
-        end
-        if win and vim.api.nvim_win_is_valid(win) then
-          vim.api.nvim_win_call(win, open)
-        else
-          open()
-        end
+      action = function(_, ctx)
+        open_linked_buffer(ctx, uri)
+      end,
+    }
+    ret[("gh_linked_%s_panel_%d"):format(target, i)] = {
+      desc = ("Open %s #%s in panel"):format(kind, number),
+      icon = " ",
+      priority = -1,
+      action = function(_, ctx)
+        open_linked_panel(ctx, uri, ("%s #%s"):format(kind, number))
       end,
     }
     ret[("gh_linked_%s_browser_%d"):format(target, i)] = {

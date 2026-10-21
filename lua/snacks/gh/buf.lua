@@ -53,6 +53,13 @@ end
 
 function M:keys()
   local actions = Actions.get_actions(self.item, { items = { self.item } })
+  local in_linked_panel = false
+  for _, win in ipairs(vim.fn.win_findbuf(self.buf)) do
+    if vim.w[win].snacks_gh_linked_panel then
+      in_linked_panel = true
+      break
+    end
+  end
 
   ---@param name string
   local function wrap(name)
@@ -67,7 +74,11 @@ function M:keys()
   end
 
   for name, km in pairs(self.opts.keys or {}) do
-    if km ~= false then
+    local is_panel_escape = km ~= false
+      and in_linked_panel
+      and vim.api.nvim_replace_termcodes(km[1], true, false, true)
+        == vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
+    if km ~= false and not is_panel_escape then
       local rhs = km[2]
       local desc = km.desc
       local action = type(rhs) == "function" and rhs or type(rhs) == "string" and wrap(rhs) or nil
