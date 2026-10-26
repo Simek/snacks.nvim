@@ -4,6 +4,7 @@
 ---@field fields string[]
 ---@field view string[] -- fields to fetch for gh view
 ---@field list string[] -- fields to fetch for gh list
+---@field detail string[] -- fields to fetch for full item details
 ---@field text string[]
 ---@field options string[]
 ---@field transform? fun(item: snacks.picker.gh.Item): snacks.picker.gh.Item?

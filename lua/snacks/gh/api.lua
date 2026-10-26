@@ -14,19 +14,23 @@ local config = {
   base = {
     list = {
       "author",
-      "closedAt",
-      "createdAt",
       "id",
-      "body",
       "labels",
       "number",
-      "reactionGroups",
       "state",
       "title",
-      "updatedAt",
       "url",
     },
-    view = { "comments" },
+    detail = {
+      "body",
+      "closedAt",
+      "createdAt",
+      "reactionGroups",
+      "updatedAt",
+    },
+    view = {
+      "comments",
+    },
     text = { "author", "hash", "label", "title" },
     options = { "app", "assignee", "author", "jq", "label", "repo", "search", "state" },
   },
@@ -35,7 +39,6 @@ local config = {
   },
   issue = {
     list = { "stateReason", "issueType", "closedByPullRequestsReferences" },
-    view = { "issueType" },
     options = { "mention", "milestone" },
     ---@param item snacks.picker.gh.Item
     transform = function(item)
@@ -46,12 +49,14 @@ local config = {
   pr = {
     options = { "base", "draft" },
     list = {
-      "mergedAt",
-      "changedFiles",
       "closingIssuesReferences",
+      "isDraft",
+    },
+    detail = {
+      "changedFiles",
+      "mergedAt",
       "mergeable",
       "mergeStateStatus",
-      "isDraft",
     },
     view = {
       "additions",
@@ -59,7 +64,6 @@ local config = {
       "deletions",
       "headRefName",
       "headRefOid",
-      "mergedAt",
       "statusCheckRollup",
       "reviews",
     },
@@ -120,7 +124,8 @@ end
 
 ---@param what "issue" | "pr"
 ---@param key "list" | "view"
-local function get_opts(what, key)
+---@param details? boolean
+local function get_opts(what, key, details)
   local base = vim.deepcopy(config.base)
   local specific = vim.deepcopy(config[what] or {})
   base.type = what
@@ -128,6 +133,10 @@ local function get_opts(what, key)
   if key ~= "list" then
     base.fields = vim.list_extend(base.fields, base[key] or {})
     base.fields = vim.list_extend(base.fields, specific[key] or {})
+  end
+  if details then
+    base.fields = vim.list_extend(base.fields, base.detail or {})
+    base.fields = vim.list_extend(base.fields, specific.detail or {})
   end
   base.text = vim.list_extend(base.text, specific.text or {})
   base.options = vim.list_extend(base.options, specific.options or {})
@@ -325,7 +334,7 @@ end
 ---@param opts? { fields?: string[], force?: boolean }
 function M.view(cb, item, opts)
   opts = opts or {}
-  local api_opts = get_opts(item.type, "view")
+  local api_opts = get_opts(item.type, "view", true)
   if opts.fields then
     api_opts.fields = vim.list_extend(api_opts.fields, opts.fields)
   end
@@ -544,7 +553,7 @@ function M.current_pr()
   end
 
   -- try with `pr view` first
-  local api_opts = get_opts("pr", "list")
+  local api_opts = get_opts("pr", "list", true)
   pr = M.fetch_sync({
     args = { "pr", "view" },
     fields = api_opts.fields,
